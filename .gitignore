@@ -11,3 +11,4 @@ frontend/.env
 # Build output
 dist/
 build/
+coverage/
