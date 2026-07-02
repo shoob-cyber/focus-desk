@@ -9,6 +9,10 @@ import TasksPage from './pages/TasksPage';
 import TimerPage from './pages/TimerPage';
 import DashboardPage from './pages/DashboardPage';
 import Navbar from './components/Navbar';
+import SettingsPage from './pages/SettingsPage';
+
+// Inside AppContent Routes:
+<Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useContext(AuthContext);

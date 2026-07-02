@@ -21,6 +21,13 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+
+export const userAPI = {
+  getSettings: () => apiClient.get('/users/settings'),
+  updateSettings: (settings) => apiClient.put('/users/settings', settings),
+};
+
+
 export const authAPI = {
   register: (email, password) => 
     apiClient.post('/auth/register', { email, password }),
@@ -30,12 +37,9 @@ export const authAPI = {
 
 export const taskAPI = {
   getTasks: () => apiClient.get('/tasks'),
-  createTask: (title, description, dueDate, estimatedPomodoros) =>
-    apiClient.post('/tasks', { title, description, dueDate, estimatedPomodoros }),
-  updateTask: (taskId, updates) =>
-    apiClient.put(`/tasks/${taskId}`, updates),
-  deleteTask: (taskId) =>
-    apiClient.delete(`/tasks/${taskId}`),
+  createTask: (taskData) => apiClient.post('/tasks', taskData), // Refactored to accept an object
+  updateTask: (taskId, updates) => apiClient.put(`/tasks/${taskId}`, updates),
+  deleteTask: (taskId) => apiClient.delete(`/tasks/${taskId}`),
 };
 
 export const sessionAPI = {

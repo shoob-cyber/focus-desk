@@ -11,29 +11,36 @@ datasource db {
 }
 
 model User {
-  id    String     @id @default(cuid())
-  email String     @unique
-  passwordHash String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  passwordHash       String
+  
+  // New preference fields
+  pomodoroDuration   Int      @default(25)
+  shortBreakDuration Int      @default(5)
+  longBreakDuration  Int      @default(15)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  sessions PomodoroSession[]
+  sessions           PomodoroSession[]
 
   @@map("users")
 }
 
 model Task {
-  id    String     @id @default(cuid())
-  title String
-  description String?
-  dueDate DateTime?
-  status String @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
-  estimatedPomodoros Int @default(1)
-  userId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  title              String
+  description        String?
+  dueDate            DateTime?
+  status             String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  priority           String   @default("MEDIUM")  // LOW, MEDIUM, HIGH
+  estimatedPomodoros Int      @default(1)
+  userId             String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  sessions PomodoroSession[]
+  sessions           PomodoroSession[]
 
   @@map("tasks")
 }

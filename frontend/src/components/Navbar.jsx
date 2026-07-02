@@ -2,7 +2,7 @@ import { useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
-import { LogOut, Home, CheckSquare, Clock, Moon, Sun } from 'lucide-react';
+import { LogOut, Home, CheckSquare, Clock, Moon, Sun, Settings } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
@@ -15,11 +15,13 @@ export default function Navbar() {
     navigate('/login');
   };
 
-  const navLinks = [
-    { path: '/dashboard', label: 'Dashboard', icon: Home },
-    { path: '/tasks', label: 'Tasks', icon: CheckSquare },
-    { path: '/timer', label: 'Timer', icon: Clock },
-  ];
+// Inside the navigation links array:
+const navLinks = [
+  { path: '/dashboard', label: 'Dashboard', icon: Home },
+  { path: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { path: '/timer', label: 'Timer', icon: Clock },
+  { path: '/settings', label: 'Settings', icon: Settings }, // <-- ADD THIS
+];
 
   return (
     <nav className="bg-white dark:bg-surface-800 shadow-md transition-colors duration-200">
