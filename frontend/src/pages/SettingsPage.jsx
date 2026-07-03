@@ -16,7 +16,7 @@ export default function SettingsPage() {
     fetchSettings();
   }, []);
 
-  const fetchSettings = async () => {
+  async function fetchSettings() {
     try {
       const response = await userAPI.getSettings();
       if (response.data) {
@@ -31,7 +31,7 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -22,11 +22,8 @@ export default function TasksPage() {
     priority: 'MEDIUM'
   });
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
 
-  const fetchTasks = async () => {
+  async function fetchTasks() {
     try {
       const response = await taskAPI.getTasks();
       setTasks(response.data);
@@ -35,7 +32,11 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchTasks();  // ✅ Now it's defined
+  }, []);
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
@@ -57,7 +58,7 @@ export default function TasksPage() {
 
     // Optimistic UI update
     const newStatus = destination.droppableId;
-    setTasks(prev => prev.map(task => 
+    setTasks(prev => prev.map(task =>
       task.id === draggableId ? { ...task, status: newStatus } : task
     ));
 
@@ -129,7 +130,7 @@ export default function TasksPage() {
                   {tasks.filter(t => t.status === column.id).length}
                 </span>
               </h2>
-              
+
               <Droppable droppableId={column.id}>
                 {(provided, snapshot) => (
                   <div
@@ -146,9 +147,9 @@ export default function TasksPage() {
                             {...provided.dragHandleProps}
                             className="mb-3"
                           >
-                            <TaskCard 
-                              task={task} 
-                              onDelete={handleDeleteTask} 
+                            <TaskCard
+                              task={task}
+                              onDelete={handleDeleteTask}
                               isDragging={snapshot.isDragging}
                             />
                           </div>
