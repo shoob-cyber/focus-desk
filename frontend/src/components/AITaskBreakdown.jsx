@@ -20,7 +20,7 @@ export default function AITaskBreakdown({ onTasksGenerated }) {
 
     try {
       const response = await aiAPI.breakdownTask(taskDescription);
-      setSubtasks(response.subtasks);
+      setSubtasks(response.data.subtasks);
     } catch (err) {
       setError('Failed to break down task. Please try again.');
       console.error(err);

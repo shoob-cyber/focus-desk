@@ -1,10 +1,23 @@
 import { useState } from 'react';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Trash2, GripVertical } from 'lucide-react';
+import { useDraggable } from '@dnd-kit/core';
 
 export default function TaskCard({ task, onDelete, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editStatus, setEditStatus] = useState(task.status);
   const [editPriority, setEditPriority] = useState(task.priority || 'MEDIUM');
+
+  // Only the grip handle is draggable — keeps the dropdowns/buttons clickable
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: isDragging ? 50 : 'auto',
+      }
+    : undefined;
 
   const handleStatusChange = async (newStatus) => {
     setEditStatus(newStatus);
@@ -44,15 +57,35 @@ export default function TaskCard({ task, onDelete, onUpdate }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow ${
+        isDragging ? 'opacity-50 shadow-xl ring-2 ring-blue-400' : ''
+      }`}
+    >
       <div className="flex justify-between items-start">
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">{task.title}</h3>
+          <div className="flex items-start gap-2">
+            {/* Drag handle — this is the only draggable part of the card */}
+            <span
+              {...attributes}
+              {...listeners}
+              className="mt-1 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none select-none inline-flex"
+              title="Drag to move"
+              role="button"
+              tabIndex={0}
+            >
+              <GripVertical size={18} />
+            </span>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{task.title}</h3>
+          </div>
+
           {task.description && (
-            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">{task.description}</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 ml-6">{task.description}</p>
           )}
 
-          <div className="flex items-center gap-3 mt-3 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-3 mt-3 ml-6 text-sm text-gray-600 dark:text-gray-400">
             {task.dueDate && (
               <span>📅 Due: {new Date(task.dueDate).toLocaleDateString()}</span>
             )}
@@ -60,7 +93,7 @@ export default function TaskCard({ task, onDelete, onUpdate }) {
           </div>
 
           {/* Priority Badge */}
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 ml-6 flex gap-2">
             <select
               value={editPriority}
               onChange={(e) => handlePriorityChange(e.target.value)}
