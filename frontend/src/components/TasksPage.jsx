@@ -1,152 +1,260 @@
-import React, { useState, useEffect } from 'react';
-import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import KanbanColumn from '../components/KanbanColumn';
-import client from '../api/client'; // Assuming this maps to your unified API layer
-
-const COLUMNS = [
-  { id: 'PENDING', title: 'Pending 📝' },
-  { id: 'IN_PROGRESS', title: 'In Progress ⚡' },
-  { id: 'COMPLETED', title: 'Completed 🎉' }
-];
+import { useState, useEffect } from 'react';
+import { taskAPI } from '../api/client';
+import TaskCard from '../components/TaskCard';
+import AITaskBreakdown from '../components/AITaskBreakdown';
+import { Plus } from 'lucide-react';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
-  const [newTitle, setNewTitle] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [newPriority, setNewPriority] = useState('MEDIUM');
-
-  // Configure pointer activation constraints to allow standard button/input interactions smoothly
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 }
-    })
-  );
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    estimatedPomodoros: 1,
+  });
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
   const fetchTasks = async () => {
+    setLoading(true);
     try {
-      const res = await client.get('/tasks');
-      setTasks(res.data);
-    } catch (err) {
-      console.error("Failed fetching tasks", err);
+      const response = await taskAPI.getTasks();
+      setTasks(response.data);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
-
     try {
-      const res = await client.post('/tasks', {
-        title: newTitle,
-        description: newDesc,
-        priority: newPriority,
-        status: 'PENDING'
+      await taskAPI.createTask(
+        formData.title,
+        formData.description,
+        formData.dueDate,
+        formData.estimatedPomodoros
+      );
+      setFormData({
+        title: '',
+        description: '',
+        dueDate: '',
+        estimatedPomodoros: 1,
       });
-      setTasks((prev) => [...prev, res.data]);
-      setNewTitle('');
-      setNewDesc('');
-      setNewPriority('MEDIUM');
-    } catch (err) {
-      console.error("Failed creating task", err);
+      setShowForm(false);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error creating task:', error);
     }
   };
 
-  const handleDeleteTask = async (id) => {
+  const handleCreateTaskFromAI = async (taskData) => {
     try {
-      await client.delete(`/tasks/${id}`);
-      setTasks((prev) => prev.filter(t => t.id !== id));
-    } catch (err) {
-      console.error("Failed deleting task", err);
+      await taskAPI.createTask(
+        taskData.title,
+        taskData.description || '',
+        taskData.dueDate || '',
+        taskData.estimatedPomodoros || 1
+      );
+      fetchTasks();
+    } catch (error) {
+      console.error('Error creating task:', error);
     }
   };
 
-  const handleDragEnd = async (event) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const taskId = active.id;
-    const nextStatus = over.id; // Target column string ('PENDING', 'IN_PROGRESS', 'COMPLETED')
-
-    // Find current task state locally
-    const currentTask = tasks.find(t => t.id === taskId);
-    if (!currentTask || currentTask.status === nextStatus) return;
-
-    // Optimistically update frontend UI instantly
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: nextStatus } : t));
-
+  const handleDeleteTask = async (taskId) => {
     try {
-      // Keep state bound inline with database schema fields
-      await client.patch(`/tasks/${taskId}`, { status: nextStatus });
-    } catch (err) {
-      console.error("Backend synchronizing error", err);
-      fetchTasks(); // Rollback local state state on request failure
+      await taskAPI.deleteTask(taskId);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
     }
   };
+
+  const handleUpdateTask = async (taskId, updates) => {
+    try {
+      await taskAPI.updateTask(taskId, updates);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  // Organize tasks by status
+  const todoTasks = tasks.filter(t => t.status === 'PENDING');
+  const inProgressTasks = tasks.filter(t => t.status === 'IN_PROGRESS');
+  const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-200 min-h-screen">
-      
-      {/* Task Creation Header Card */}
-      <div className="bg-surface-light dark:bg-surface-cardDark border border-slate-200 dark:border-slate-800/80 p-6 rounded-2xl shadow-sm mb-8 transition-colors">
-        <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Create New Task</h2>
-        <form onSubmit={handleCreateTask} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div className="md:col-span-2 space-y-2">
-            <input
-              type="text"
-              placeholder="What needs doing?"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 bg-transparent dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm"
-            />
-            <input
-              type="text"
-              placeholder="Add optional description..."
-              value={newDesc}
-              onChange={(e) => setNewDesc(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 bg-transparent dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm"
-            />
-          </div>
-          
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wide px-1">Priority</label>
-            <select
-              value={newPriority}
-              onChange={(e) => setNewPriority(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-cardDark dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm"
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm py-2 px-4 rounded-xl shadow-md shadow-brand-500/10 hover:shadow-brand-500/20 active:scale-[0.98] transform transition-all duration-150 h-[40px]"
-          >
-            Add to Board
-          </button>
-        </form>
+    <div className="max-w-7xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Tasks</h1>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition"
+        >
+          <Plus size={20} />
+          <span>New Task</span>
+        </button>
       </div>
 
-      {/* Kanban Canvas */}
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="flex flex-col md:flex-row gap-6 items-start overflow-x-auto pb-4">
-          {COLUMNS.map((col) => (
-            <KanbanColumn
-              key={col.id}
-              id={col.id}
-              title={col.title}
-              tasks={tasks.filter((t) => t.status === col.id)}
-              onDeleteTask={handleDeleteTask}
-            />
-          ))}
+      {/* AI Task Breakdown */}
+      <AITaskBreakdown onTasksGenerated={handleCreateTaskFromAI} />
+
+      {/* Create Task Form */}
+      {showForm && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Create New Task</h2>
+          <form onSubmit={handleCreateTask} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Task Title *
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                required
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., Build login page"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Task details (optional)"
+                rows="3"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dueDate: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Est. Pomodoros
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.estimatedPomodoros}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      estimatedPomodoros: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="flex-1 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition"
+              >
+                Create Task
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-bold py-2 px-4 rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
-      </DndContext>
+      )}
+
+      {/* Kanban Board */}
+      {loading ? (
+        <div className="text-center text-gray-600 dark:text-gray-400">Loading tasks...</div>
+      ) : tasks.length === 0 ? (
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 text-center">
+          <p className="text-gray-600 dark:text-gray-400">No tasks yet. Create one to get started!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* To Do Column */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">
+              To Do <span className="text-gray-600 dark:text-gray-400">{todoTasks.length}</span>
+            </h3>
+            <div className="space-y-3">
+              {todoTasks.map(task => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onDelete={handleDeleteTask}
+                  onUpdate={handleUpdateTask}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* In Progress Column */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">
+              In Progress <span className="text-gray-600 dark:text-gray-400">{inProgressTasks.length}</span>
+            </h3>
+            <div className="space-y-3">
+              {inProgressTasks.map(task => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onDelete={handleDeleteTask}
+                  onUpdate={handleUpdateTask}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Done Column */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">
+              Done <span className="text-gray-600 dark:text-gray-400">{completedTasks.length}</span>
+            </h3>
+            <div className="space-y-3">
+              {completedTasks.map(task => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onDelete={handleDeleteTask}
+                  onUpdate={handleUpdateTask}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

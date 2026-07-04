@@ -52,4 +52,10 @@ export const analyticsAPI = {
   getDashboardStats: () => apiClient.get('/analytics/dashboard'),
 };
 
+// ============ AI ENDPOINTS ============
+export const aiAPI = {
+  breakdownTask: (taskDescription) =>
+    apiClient.post('/ai/breakdown', { taskDescription }),
+};
+
 export default apiClient;
