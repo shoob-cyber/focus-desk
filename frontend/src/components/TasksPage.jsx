@@ -1,41 +1,20 @@
 import { useState, useEffect } from 'react';
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  useDroppable,
-} from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { taskAPI } from '../api/client';
-import TaskCard from '../components/TaskCard';
 import AITaskBreakdown from '../components/AITaskBreakdown';
+import KanbanColumn from '../components/KanbanColumn';
 import { Plus } from 'lucide-react';
 
-// A single Kanban column that acts as a drop target
-function Column({ id, title, count, children }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 transition-colors ${
-        isOver ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-gray-700' : ''
-      }`}
-    >
-      <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">
-        {title} <span className="text-gray-600 dark:text-gray-400">{count}</span>
-      </h3>
-      <div className="space-y-3 min-h-[80px]">{children}</div>
-    </div>
-  );
-}
+const COLUMNS = [
+  { id: 'PENDING', title: 'To Do' },
+  { id: 'IN_PROGRESS', title: 'In Progress' },
+  { id: 'COMPLETED', title: 'Done' },
+];
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [activeTask, setActiveTask] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -43,10 +22,12 @@ export default function TasksPage() {
     estimatedPomodoros: 1,
   });
 
-  // Require a small drag distance before activating, so clicks on the
-  // handle don't accidentally register as drags
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
   );
 
   useEffect(() => {
@@ -68,7 +49,8 @@ export default function TasksPage() {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      await taskAPI.createTask(formData);
+      const response = await taskAPI.createTask(formData);
+      setTasks((prev) => [response.data, ...prev]);
       setFormData({
         title: '',
         description: '',
@@ -76,7 +58,6 @@ export default function TasksPage() {
         estimatedPomodoros: 1,
       });
       setShowForm(false);
-      fetchTasks();
     } catch (error) {
       console.error('Error creating task:', error);
     }
@@ -84,34 +65,43 @@ export default function TasksPage() {
 
   const handleCreateTaskFromAI = async (taskData) => {
     try {
-      await taskAPI.createTask({
+      const response = await taskAPI.createTask({
         title: taskData.title,
         description: taskData.description || '',
         dueDate: taskData.dueDate || '',
         estimatedPomodoros: taskData.estimatedPomodoros || 1,
       });
-      fetchTasks();
+      setTasks((prev) => [response.data, ...prev]);
     } catch (error) {
       console.error('Error creating task:', error);
     }
   };
 
   const handleDeleteTask = async (taskId) => {
+    // Optimistic removal — the card disappears instantly, no full board reload
+    const previousTasks = tasks;
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
     try {
       await taskAPI.deleteTask(taskId);
-      fetchTasks();
     } catch (error) {
       console.error('Error deleting task:', error);
+      setTasks(previousTasks); // restore on failure
     }
   };
 
-  // Optimistic update: reflect the change instantly in the UI (important
-  // for drag & drop to feel responsive), then sync with the server.
-  // If the server call fails, refetch to fall back to the true state.
+  // Optimistic update, and the task that was just changed is moved to the
+  // front of the list — so it always lands at the top of its new column.
+  // This makes the result predictable instead of depending on wherever the
+  // task happened to sit in creation order.
   const handleUpdateTask = async (taskId, updates) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
-    );
+    setTasks((prev) => {
+      const target = prev.find((t) => t.id === taskId);
+      if (!target) return prev;
+      const updated = { ...target, ...updates };
+      const rest = prev.filter((t) => t.id !== taskId);
+      return [updated, ...rest];
+    });
+
     try {
       await taskAPI.updateTask(taskId, updates);
     } catch (error) {
@@ -120,24 +110,15 @@ export default function TasksPage() {
     }
   };
 
-  const handleDragStart = (event) => {
-    const task = tasks.find((t) => t.id === event.active.id);
-    setActiveTask(task || null);
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    setActiveTask(null);
-
+  const handleDragEnd = ({ active, over }) => {
     if (!over) return;
 
-    const taskId = active.id;
-    const newStatus = over.id; // column ids match status values
+    const nextStatus = over.id;
+    const currentTask = tasks.find((task) => task.id === active.id);
 
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.status === newStatus) return;
+    if (!currentTask || currentTask.status === nextStatus) return;
 
-    handleUpdateTask(taskId, { status: newStatus });
+    void handleUpdateTask(active.id, { status: nextStatus });
   };
 
   // Organize tasks by status
@@ -257,52 +238,19 @@ export default function TasksPage() {
           <p className="text-gray-600 dark:text-gray-400">No tasks yet. Create one to get started!</p>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Column id="PENDING" title="To Do" count={todoTasks.length}>
-              {todoTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onDelete={handleDeleteTask}
-                  onUpdate={handleUpdateTask}
-                />
-              ))}
-            </Column>
-
-            <Column id="IN_PROGRESS" title="In Progress" count={inProgressTasks.length}>
-              {inProgressTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onDelete={handleDeleteTask}
-                  onUpdate={handleUpdateTask}
-                />
-              ))}
-            </Column>
-
-            <Column id="COMPLETED" title="Done" count={completedTasks.length}>
-              {completedTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onDelete={handleDeleteTask}
-                  onUpdate={handleUpdateTask}
-                />
-              ))}
-            </Column>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            {COLUMNS.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                id={column.id}
+                title={column.title}
+                tasks={tasks.filter((task) => task.status === column.id)}
+                onDeleteTask={handleDeleteTask}
+                onUpdateTask={handleUpdateTask}
+              />
+            ))}
           </div>
-
-          {/* Floating preview of the card while it's being dragged */}
-          <DragOverlay>
-            {activeTask ? (
-              <TaskCard task={activeTask} onDelete={() => {}} onUpdate={() => {}} />
-            ) : null}
-          </DragOverlay>
         </DndContext>
       )}
     </div>

@@ -1,6 +1,6 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const breakdownTask = async (req, res) => {
   try {
@@ -9,8 +9,6 @@ const breakdownTask = async (req, res) => {
     if (!taskDescription || taskDescription.trim().length === 0) {
       return res.status(400).json({ message: 'Task description is required' });
     }
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `Break down this task into smaller subtasks. For each subtask, estimate how many 25-minute Pomodoro sessions it will take (1-5).
 
@@ -26,19 +24,47 @@ Respond ONLY in JSON format like this:
 
 Create 3-5 realistic subtasks.`;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
-      return res.status(500).json({ message: 'Failed to parse AI response' });
+    const result = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: prompt,
+      config: {
+        // Ask Gemini to return raw JSON directly instead of hoping it
+        // doesn't wrap the answer in ```json fences or extra prose.
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const responseText = result.text;
+
+    if (!responseText) {
+      console.error('AI Error: empty response from Gemini', result);
+      return res.status(502).json({ message: 'AI service returned an empty response' });
     }
 
-    const breakdown = JSON.parse(jsonMatch[0]);
+    let breakdown;
+    try {
+      breakdown = JSON.parse(responseText);
+    } catch (parseErr) {
+      // Fallback: in case responseMimeType is ignored and the model
+      // still wraps the JSON in markdown fences or extra text.
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.error('AI Error: could not find JSON in response:', responseText);
+        return res.status(502).json({ message: 'Failed to parse AI response' });
+      }
+      breakdown = JSON.parse(jsonMatch[0]);
+    }
+
+    if (!breakdown || !Array.isArray(breakdown.subtasks)) {
+      console.error('AI Error: unexpected response shape:', breakdown);
+      return res.status(502).json({ message: 'AI response was missing subtasks' });
+    }
+
     res.status(200).json(breakdown);
-    
+
   } catch (error) {
+    // Always log the full error server-side for debugging, but never let
+    // it crash the process — respond with a clean error instead.
     console.error('AI Error:', error);
     res.status(500).json({ message: 'Error: ' + error.message });
   }

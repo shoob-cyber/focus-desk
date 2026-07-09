@@ -1,34 +1,21 @@
 import { useState } from 'react';
-import { Trash2, GripVertical } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { CSS } from '@dnd-kit/utilities';
 import { useDraggable } from '@dnd-kit/core';
+import { Trash2, ArrowRight, ArrowLeft, Check, RotateCcw, GripVertical } from 'lucide-react';
 
 export default function TaskCard({ task, onDelete, onUpdate }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editStatus, setEditStatus] = useState(task.status);
   const [editPriority, setEditPriority] = useState(task.priority || 'MEDIUM');
-
-  // Only the grip handle is draggable — keeps the dropdowns/buttons clickable
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
   });
-
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: isDragging ? 50 : 'auto',
-      }
-    : undefined;
-
-  const handleStatusChange = async (newStatus) => {
-    setEditStatus(newStatus);
-    onUpdate(task.id, { status: newStatus });
-    setIsEditing(false);
-  };
 
   const handlePriorityChange = async (newPriority) => {
     setEditPriority(newPriority);
     onUpdate(task.id, { priority: newPriority });
   };
+
+  const setStatus = (newStatus) => onUpdate(task.id, { status: newStatus });
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -57,21 +44,27 @@ export default function TaskCard({ task, onDelete, onUpdate }) {
   };
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
-      style={style}
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        zIndex: isDragging ? 50 : undefined,
+      }}
       className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow ${
-        isDragging ? 'opacity-50 shadow-xl ring-2 ring-blue-400' : ''
+        isDragging ? 'opacity-60 shadow-xl ring-2 ring-blue-400' : ''
       }`}
     >
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-start gap-2">
-            {/* Drag handle — this is the only draggable part of the card */}
             <span
               {...attributes}
               {...listeners}
-              className="mt-1 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none select-none inline-flex"
+              className="mt-1 inline-flex select-none text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none"
               title="Drag to move"
               role="button"
               tabIndex={0}
@@ -82,10 +75,10 @@ export default function TaskCard({ task, onDelete, onUpdate }) {
           </div>
 
           {task.description && (
-            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 ml-6">{task.description}</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">{task.description}</p>
           )}
 
-          <div className="flex items-center gap-3 mt-3 ml-6 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-3 mt-3 text-sm text-gray-600 dark:text-gray-400">
             {task.dueDate && (
               <span>📅 Due: {new Date(task.dueDate).toLocaleDateString()}</span>
             )}
@@ -93,7 +86,7 @@ export default function TaskCard({ task, onDelete, onUpdate }) {
           </div>
 
           {/* Priority Badge */}
-          <div className="mt-3 ml-6 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <select
               value={editPriority}
               onChange={(e) => handlePriorityChange(e.target.value)}
@@ -106,35 +99,58 @@ export default function TaskCard({ task, onDelete, onUpdate }) {
           </div>
         </div>
 
-        {/* Status + Actions */}
+        {/* Status badge + delete */}
         <div className="flex items-center gap-2 ml-4">
-          {isEditing ? (
-            <select
-              value={editStatus}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className={`px-3 py-1 border border-gray-300 rounded text-sm ${getStatusColor(editStatus)}`}
-            >
-              <option value="PENDING">Pending</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="COMPLETED">Completed</option>
-            </select>
-          ) : (
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)} cursor-pointer hover:opacity-80`}
-              onClick={() => setIsEditing(true)}
-            >
-              {task.status}
-            </span>
-          )}
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)}`}>
+            {task.status.replace('_', ' ')}
+          </span>
 
           <button
-            onClick={() => onDelete(task.id)}
+            onClick={(e) => { e.currentTarget.blur(); onDelete(task.id); }}
             className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900 rounded transition"
           >
             <Trash2 size={18} />
           </button>
         </div>
       </div>
-    </div>
+
+      {/* Explicit status actions — the primary, always-reliable way to move a task forward */}
+      <div className="mt-4 flex gap-2">
+        {task.status === 'PENDING' && (
+          <button
+            onClick={(e) => { e.currentTarget.blur(); setStatus('IN_PROGRESS'); }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-lg transition"
+          >
+            Start Working <ArrowRight size={14} />
+          </button>
+        )}
+
+        {task.status === 'IN_PROGRESS' && (
+          <>
+            <button
+              onClick={(e) => { e.currentTarget.blur(); setStatus('COMPLETED'); }}
+              className="flex items-center gap-1.5 text-sm font-semibold text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/40 px-3 py-1.5 rounded-lg transition"
+            >
+              <Check size={14} /> Mark Complete
+            </button>
+            <button
+              onClick={(e) => { e.currentTarget.blur(); setStatus('PENDING'); }}
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition"
+            >
+              <ArrowLeft size={14} /> Back to To Do
+            </button>
+          </>
+        )}
+
+        {task.status === 'COMPLETED' && (
+          <button
+            onClick={(e) => { e.currentTarget.blur(); setStatus('IN_PROGRESS'); }}
+            className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition"
+          >
+            <RotateCcw size={14} /> Reopen
+          </button>
+        )}
+      </div>
+    </motion.div>
   );
 }

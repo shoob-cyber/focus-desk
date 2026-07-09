@@ -1,7 +1,8 @@
+import { AnimatePresence } from 'framer-motion';
 import { useDroppable } from '@dnd-kit/core';
 import TaskCard from './TaskCard';
 
-export default function KanbanColumn({ id, title, tasks, onDeleteTask }) {
+export default function KanbanColumn({ id, title, tasks, onDeleteTask, onUpdateTask }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
@@ -21,9 +22,11 @@ export default function KanbanColumn({ id, title, tasks, onDeleteTask }) {
           isOver ? 'bg-slate-100/80 dark:bg-surface-cardDark/40 border-2 border-dashed border-brand-500/40' : ''
         }`}
       >
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onDelete={onDeleteTask} />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {tasks.map((task) => (
+            <TaskCard key={task.id} task={task} onDelete={onDeleteTask} onUpdate={onUpdateTask} />
+          ))}
+        </AnimatePresence>
         
         {tasks.length === 0 && (
           <div className="flex-1 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-800/80 rounded-xl p-4">
