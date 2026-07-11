@@ -20,7 +20,7 @@ export default function AITaskBreakdown({ onTasksGenerated }) {
 
     try {
       const response = await aiAPI.breakdownTask(taskDescription);
-      setSubtasks(response.data.subtasks);
+      setSubtasks(response.subtasks);
     } catch (err) {
       setError('Failed to break down task. Please try again.');
       console.error(err);
@@ -63,7 +63,7 @@ export default function AITaskBreakdown({ onTasksGenerated }) {
       <textarea
         value={taskDescription}
         onChange={(e) => setTaskDescription(e.target.value)}
-        placeholder="e.g., Build a user authentication system..."
+        placeholder="e.g., Build a user authentication system with email verification..."
         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
         rows="3"
       />
