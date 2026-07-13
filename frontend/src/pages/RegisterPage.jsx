@@ -49,8 +49,8 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center gradient-bg-login p-layout-md">
       <div className="card w-full max-w-md animate-scale-in">
-        <h1 className="text-3xl font-bold text-surface-900 mb-2">FocusDesk</h1>
-        <p className="text-surface-800 opacity-80 mb-6">Create your account</p>
+        <h1 className="text-3xl font-bold text-surface-900 dark:text-white mb-2">FocusDesk</h1>
+        <p className="text-surface-800 dark:text-surface-200 opacity-80 mb-6">Focus better, track smarter</p>
 
         {error && (
           <div className="bg-brand-danger/10 border border-brand-danger text-brand-danger px-4 py-3 rounded-lg mb-4 animate-fade-in">
@@ -60,7 +60,7 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-surface-800 mb-1">
+            <label className="block text-sm font-medium text-surface-800 dark:text-surface-200 mb-1">
               Email
             </label>
             <input
@@ -74,7 +74,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-surface-800 mb-1">
+            <label className="block text-sm font-medium text-surface-800 dark:text-surface-200 mb-1">
               Password
             </label>
             <input
@@ -88,7 +88,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-surface-800 mb-1">
+            <label className="block text-sm font-medium text-surface-800 dark:text-surface-200 mb-1">
               Confirm Password
             </label>
             <input
@@ -110,7 +110,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="text-center text-surface-800 mt-6 text-sm">
+        <p className="text-center text-surface-800 dark:text-surface-200 mt-6 text-sm">
           Already have an account?{' '}
           <Link to="/login" className="text-brand-primary hover:underline font-semibold">
             Log in
@@ -120,3 +120,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+

@@ -36,8 +36,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center gradient-bg-login p-layout-md">
       <div className="card w-full max-w-md animate-scale-in">
-        <h1 className="text-3xl font-bold text-surface-900 mb-2">FocusDesk</h1>
-        <p className="text-surface-800 opacity-80 mb-6">Focus better, track smarter</p>
+        <h1 className="text-3xl font-bold text-surface-900 dark:text-white mb-2">FocusDesk</h1>
+        <p className="text-surface-800 dark:text-surface-200 opacity-80 mb-6">Focus better, track smarter</p>
 
         {error && (
           <div className="bg-brand-danger/10 border border-brand-danger text-brand-danger px-4 py-3 rounded-lg mb-4 animate-fade-in">
@@ -47,7 +47,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-surface-800 mb-1">
+            <label className="block text-sm font-medium text-surface-800 dark:text-surface-200 mb-1">
               Email
             </label>
             <input
@@ -61,7 +61,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-surface-800 mb-1">
+            <label className="block text-sm font-medium text-surface-800 dark:text-surface-200 mb-1">
               Password
             </label>
             <input
@@ -83,7 +83,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-surface-800 mt-6 text-sm">
+        <p className="text-center text-surface-800 dark:text-surface-200 mt-6 text-sm">
           Don't have an account?{' '}
           <Link to="/register" className="text-brand-primary hover:underline font-semibold">
             Sign up
@@ -93,3 +93,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
+
+
