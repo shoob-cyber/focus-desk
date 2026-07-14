@@ -11,27 +11,6 @@ import DashboardPage from './pages/DashboardPage';
 import Navbar from './components/Navbar';
 import SettingsPage from './pages/SettingsPage';
 
-function AppContent() {
-  const { user } = useContext(AuthContext);
-
-  return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors duration-200">
-      {user && <Navbar />}
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
-        <Route path="/timer" element={<ProtectedRoute><TimerPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-        
-        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
-      </Routes>
-    </div>
-  );
-}
-
 function ProtectedRoute({ children }) {
   const { user, loading } = useContext(AuthContext);
   
@@ -53,6 +32,7 @@ function AppContent() {
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
         <Route path="/timer" element={<ProtectedRoute><TimerPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
       </Routes>
